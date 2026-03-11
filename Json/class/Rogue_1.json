@@ -1,0 +1,110 @@
+{
+  "Log": false,
+  "ClassName": "Rogue",
+  "PathFilename": "1-5_Gnome.json",
+  "KeyboardOnly": true,
+  /*
+  "Paths": [
+    {
+      "PathFilename": "1_Human.json",
+      "PathThereAndBack": false,
+      "PathReduceSteps": false,
+      "Requirements": [
+        "Level < 5"
+      ]
+    },
+    {
+      "PathFilename": "5_Human.json",
+      "PathThereAndBack": false,
+      "PathReduceSteps": false,
+      "Requirements": [
+        "Level < 10"
+      ]
+    },
+    {
+      "PathFilename": "10_Human.json",
+      "PathThereAndBack": false,
+      "PathReduceSteps": false
+    }
+  ],
+  */
+  "Wait": {
+    "Sequence": [
+      {
+        "Cost": 0.9,
+        "Name": "User",
+        "Requirement": "MenuOpen || ChatInputVisible"
+      }
+    ]
+  },
+  "Pull": {
+    "Sequence": [
+      {
+        "Name": "Throw",
+        "Key": "4",
+        "Item": true,
+        "WhenUsable": true,
+        "BeforeCastStop": true,
+        "AfterCastWaitMeleeRange": true,
+        "Requirements": [
+          "AddVisible",                          // Uses NpcNameFinder to detect danger
+          "HasRangedWeapon && !Items Broken",
+          "!InMeleeRange && (SpellInRange:1)" // Throw
+        ]
+      }
+    ]
+  },
+  "Combat": {
+    "Sequence": [
+      {
+        "Name": "Eviscerate",
+        "Key": "3",
+        "Requirement": "Combo Point > 1"
+      },
+      {
+        "Name": "Sinister Strike",
+        "Key": "2"
+      },
+      {
+        "Name": "AutoAttack",
+        "Requirements": [
+          "InMeleeRange",
+          "!Charge Stun"
+        ]
+      },
+      {
+        "Name": "Approach",
+        "Requirements": [
+          "!MeleeSwinging && !SoftTargetDead"
+        ],
+        "Log": false
+      }
+    ]
+  },
+  "Adhoc": {
+    "Sequence": [
+      {
+        "Name": "Food",
+        "Key": "-",
+        "Requirement": "Health% < 30"
+      }
+    ]
+  },
+  "NPC": {
+    "Sequence": [
+      {
+        "Cost": 6,
+        "Name": "Repair",
+        "Requirement": "Durability% < 35"
+      },
+      {
+        "Cost": 6,
+        "Name": "Sell",
+        "Requirements": [
+          "BagFull",
+          "BagGreyItem"
+        ]
+      }
+    ]
+  }
+}

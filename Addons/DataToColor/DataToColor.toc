@@ -1,0 +1,40 @@
+## Interface: 40300
+## Title: DataToColor
+## Author: FreeHongKongMMO
+## Notes: Displays data as colors (Legacy Cataclysm 4.3.0)
+## Version: 1.9.12
+## RequiredDeps:
+## OptionalDeps: Ace3, LibRangeCheck, cTimerBackport
+## SavedVariables:
+
+embeds-ace3-v5.xml
+
+init.lua
+
+Collections.lua
+
+LegacyTextureToFileID.lua
+WorldMapAreaIDToUiMapID.lua
+
+Versions.lua
+
+Constants.lua
+Query.lua
+BitCache.lua
+AuraCache.lua
+
+Storage.lua
+
+Diagnostics.lua
+
+EventHandlers.lua
+
+SetupDefaultBindings.lua
+
+ActionBarTextures.lua
+ActionBarMacros.lua
+
+DataToColor.lua
+
+SellJunk.lua
+Mail.lua

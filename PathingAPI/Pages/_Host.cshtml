@@ -1,0 +1,92 @@
+﻿@page "/"
+@namespace PathingAPI.Pages
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@{
+    Layout = null;
+}
+
+@using Frontend
+
+@using Microsoft.AspNetCore.Components.Web
+@using static Microsoft.AspNetCore.Components.Web.RenderMode
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PathingAPI</title>
+    <base href="~/" />
+    <link rel="stylesheet" href="css/bootstrap/bootstrap.min.css" />
+
+    <script src="_content/MatBlazor/dist/matBlazor.js"></script>
+    <link href="_content/MatBlazor/dist/matBlazor.css" rel="stylesheet" />
+
+    <script src="/_framework/aspnetcore-browser-refresh.js"></script>
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+
+    <script src="_content/Frontend/leaflet-groupedlayercontrol/leaflet.groupedlayercontrol.min.js"></script>
+    <link rel="stylesheet" href="_content/Frontend/leaflet-groupedlayercontrol/leaflet.groupedlayercontrol.min.css" />
+
+    <link rel="stylesheet" href="_content/Frontend/leaflet/leaflet.draw.css" />
+    <link rel="stylesheet" href="_content/Frontend/css/leaflet-sidebar.css" />
+    <script src="_content/Frontend/leaflet/leaflet.draw.js"></script>
+
+    <script src="_content/Frontend/leaflet-pixi/pixi.min.js"></script>
+    <script src="_content/Frontend/leaflet-pixi/PixiOverlay.js"></script>
+
+    <script src="_content/Frontend/script/icon_atlas.js"></script>
+    <script src="_content/Frontend/script/leaflet-watch.js"></script>
+
+    <link href="css/site.css" rel="stylesheet" />
+    <script src="https://cdn.babylonjs.com/babylon.js"></script>
+
+    <style>
+        html,
+        body {
+            overflow: hidden;
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        #renderCanvas {
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+        }
+    </style>
+</head>
+<body>
+    <app>
+        <component type="typeof(App)" render-mode="ServerPrerendered" />
+    </app>
+
+    <div id="blazor-error-ui">
+        <environment include="Staging,Production">
+            An error has occurred. This application may no longer respond until reloaded.
+        </environment>
+        <environment include="Development">
+            An unhandled exception has occurred. See browser dev tools for details.
+        </environment>
+        <a href="" class="reload">Reload</a>
+        <a class="dismiss">🗙</a>
+    </div>
+
+    <script src="_framework/blazor.server.js"></script>
+
+    <script type="text/javascript">
+        caches.delete("js/babylonjs.js").then(function (e) {
+            console.log("'js/babylonjs.js' cache deleted");
+        });
+    </script>
+
+    <script src="~/js/babylonjs.js"></script>
+
+    <script src="~/js/signalr.min.js"></script>
+    <script src="~/js/signalr-protocol-msgpack.min.js"></script>
+</body>
+</html>

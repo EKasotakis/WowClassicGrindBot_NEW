@@ -1,0 +1,4 @@
+cd C:\WowClassicGrindBot-dev\HeadlessServer
+.\run.bat Warrior_6.json -r WGC -o
+dotnet build 
+dotnet clean

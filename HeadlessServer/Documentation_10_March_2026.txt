@@ -1,0 +1,103 @@
+# WowClassicGrindBot – State Endpoint Addition (Step 1 – March 2026)
+
+Purpose
+-------
+Added a minimal, background HTTP server that exposes the bot's current state as JSON
+via GET http://localhost:8080/state
+
+This is used by the planned local LLM overseer to understand position, bags, health,
+last goal, etc. every few seconds — without modifying any GOAP goals, pathing logic,
+WGC reader, RemoteV3 / AmeisenNavigation, or core bot loop.
+
+Zero new NuGet packages required.
+Completely non-intrusive — runs parallel to HeadlessServer.Run().
+
+Files Changed / Created
+───────────────────────
+
+1. New file: HeadlessServer/StateEndpointService.cs
+   → Contains the entire HTTP listener + state serialization logic
+
+2. Modified: HeadlessServer/Program.cs
+   → Added service registration + startup + graceful shutdown hooks
+
+Changes Summary
+
+A. Created new class: StateEndpointService.cs
+
+Location: HeadlessServer/StateEndpointService.cs
+
+- Uses built-in System.Net.HttpListener (no extra dependencies)
+- Listens on http://localhost:8080/
+- Responds only to GET /state with JSON containing:
+  - Timestamp
+  - Position (X,Y,Z)
+  - HealthPercent, ManaPercent
+  - BagSlotsFree
+  - DurabilityPercent (with fallback)
+  - BotStatus
+  - LastGoal (attempts to read CurrentGoal name via reflection, falls back to BotStatus)
+  - IsMounted, Combat
+- Logs startup message to console/logger
+- Graceful start/stop via CancellationToken
+
+B. Program.cs modifications (exact insertion points)
+
+1. Added using at top:
+
+using HeadlessServer;   // for StateEndpointService
+
+
+2. Added service registration (after existing AddLogging / AddSingleton calls):
+
+// === STATE ENDPOINT FOR LLM OVERSEER ===
+services.AddSingleton<StateEndpointService>();
+
+
+3. Started the endpoint after serviceProvider is built
+   (usually right after getting the Headless instance or before/after headless.Run()):
+
+var stateEndpoint = serviceProvider.GetRequiredService<StateEndpointService>();
+stateEndpoint.Start();
+
+
+4. Added cleanup hooks (recommended – prevents port staying bound on Ctrl+C)
+
+At end of Main() or in a finally block:
+
+AppDomain.CurrentDomain.ProcessExit += (_, _) => stateEndpoint.Stop();
+Console.CancelKeyPress += (_, _) => stateEndpoint.Stop();
+
+
+Verification steps performed
+─────────────────────────────
+
+- Rebuilt HeadlessServer
+- Started bot normally (Warrior_6.json + Dun Morogh path)
+- Saw in console:  "✅ State endpoint started → http://localhost:8080/state"
+- Tested with browser / curl http://localhost:8080/state
+  → Received indented JSON with live data (position, bags free, last goal name, etc.)
+- Bot continued grinding normally — no performance impact noticed
+- Endpoint continues responding even when bot is paused / in combat / vendoring
+
+Notes / Gotchas to remember
+───────────────────────────
+
+- Port 8080 — change in StateEndpointService.cs Prefixes.Add(...) if needed
+- If BagReader or PlayerReader properties changed name in later commits:
+  → Update BagSlotsFree / DurabilityPercent lines in BuildStateDto()
+- LastGoal reflection is best-effort — if it stops working, can fall back to just BotStatus
+- Endpoint is unauthenticated / localhost-only → safe for local LLM use
+- Does NOT expose sensitive info (no addon keys, no account info)
+
+Next steps (planned)
+────────────────────
+
+Step 2: Python overseer script that:
+- Polls /state every 5–10 seconds
+- Reads recent bot log lines
+- Feeds context to local Ollama (Llama 3.1 8B or similar)
+- Decides corrective actions (clear adhoc, force route to closest waypoint, etc.)
+- Sends commands back (via new HTTP POST endpoint or file-watch)
+
+— End of documentation —

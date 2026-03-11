@@ -1,0 +1,150 @@
+{
+  "ClassName": "Paladin",
+  "Mode": "AttendedGrind",
+  "PathFilename": "_pack\\1-20\\Human\\19-21_Duskwood_Hushed Bank.json",
+  "IntVariables": {
+    "MIN_SPEED_SEAL": 3000,
+    "MIN_TARGET_HP%": 20,
+    "MIN_HP_BEFORE_HEAL%": 20,
+    "Debuff_POISON": [
+      136006,
+      136007,
+      136016,
+      136064,
+      136067,
+      136077,
+      136093,
+      134437,
+      132273,
+      132274,
+      132105
+    ],
+    "Debuff_DISEASE": [
+      136127,
+      136134,
+      134324,
+      135914
+    ]
+  },
+  "Pull": {
+    "Sequence": [
+      {
+        "Name": "Seal of the Crusader",
+        "Key": "6",
+        "WhenUsable": true,
+        "Requirements": [
+          "!Seal of the Crusader",
+          "!Judgement of the Crusader",
+          "CD_Judgement <= GCD"
+        ]
+      },
+      {
+        "Name": "Judgement",
+        "Key": "1",
+        "WhenUsable": true,
+        "Requirements": [
+          "SpellInRange:0",
+          "Seal of the Crusader",
+          "!Judgement of the Crusader"
+        ]
+      }
+    ]
+  },
+  "Combat": {
+    "Sequence": [
+      {
+        "Name": "Hammer of Justice",
+        "Key": "7",
+        "WhenUsable": true,
+        "Requirements": [
+          "Judgement of the Crusader && CD_Judgement <= GCD && TargetHealth% > 20 || TargetCastingSpell"
+        ]
+      },
+      {
+        "Name": "Flash of Light",
+        "Key": "5",
+        "HasCastBar": true,
+        "WhenUsable": true,
+        "Cooldown": 5000,
+        "Requirements": [
+          "Health% < 60",
+          "TargetHealth% > 20",
+          "CD == 0",
+          "MobCount < 2",
+          "SinceDamageTakenMs <= 50"
+        ]
+      },
+      {
+        "Name": "AutoAttack",
+        "Requirements": [
+          "!Divine Protection",
+          "!Blessing of Protection",
+          "InMeleeRange"
+        ]
+      },
+      {
+        "Name": "Approach",
+        "Requirements": [
+          "!MeleeSwinging && !SoftTargetDead"
+        ],
+        "Log": false
+      }
+    ]
+  },
+  "Adhoc": {
+    "Sequence": [
+      {
+        "Name": "sharpen",
+        "Key": "F1",
+        "WhenUsable": true,
+        "HasCastbar": true,
+        "Requirement": "!HasMainHandEnchant",
+        "AfterCastWaitCastbar": true,
+        "AfterCastAuraExpected": true
+      },
+      {
+        "Cost": 3.1,
+        "Name": "Stoneform",
+        "Key": "9",
+        "InCombat": "i dont care",
+        "WhenUsable": true,
+        "Requirements": [
+          "Debuff_POISON > 1 || Debuff_DISEASE > 1"
+        ]
+      }
+    ]
+  },
+  "Parallel": {
+    "Sequence": [
+      {
+        "Name": "Drink",
+        "Key": "-",
+        "Requirement": "Mana% < 40"
+      },
+      {
+        "Name": "Food",
+        "Key": "=",
+        "Requirement": "Health% < 40"
+      }
+    ]
+  },
+  "NPC": {
+    "Sequence": [
+      {
+        "Name": "Repair",
+        "Key": "C",
+        "Requirement": "Durability% < 35",
+        "Cost": 6
+      },
+      {
+        "Name": "Sell",
+        "Key": "C",
+        "Requirements": [
+          "BagFull",
+          "BagGreyItem"
+        ],
+        "Cost": 6
+      }
+    ]
+  }
+}

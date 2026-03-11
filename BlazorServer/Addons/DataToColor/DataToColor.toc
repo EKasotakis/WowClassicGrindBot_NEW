@@ -1,0 +1,37 @@
+## Interface: 20505
+## Title: DataToColor
+## Author: FreeHongKongMMO
+## Notes: Displays data as colors (Classic TBC)
+## Version: 1.9.12
+## RequiredDeps:
+## OptionalDeps: Ace3, LibRangeCheck, LibClassicCasterino
+## SavedVariables:
+
+embeds-ace3-v12.xml
+
+init.lua
+
+Collections.lua
+
+Versions.lua
+
+Constants.lua
+Query.lua
+BitCache.lua
+AuraCache.lua
+
+Storage.lua
+
+Diagnostics.lua
+
+EventHandlers.lua
+
+SetupDefaultBindings.lua
+
+ActionBarTextures.lua
+ActionBarMacros.lua
+
+DataToColor.lua
+
+SellJunk.lua
+Mail.lua

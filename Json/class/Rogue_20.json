@@ -1,0 +1,147 @@
+{
+  "ClassName": "Rogue",
+  "PathFilename": "10_Gnome.json",
+  "CheckTargetGivesExp": false,
+  "NPCMaxLevels_Below": 50,
+  "CrossZoneSearch": true,
+  "Wait": {
+    "Sequence": [
+      {
+        "Cost": 0.9,
+        "Name": "User",
+        "Requirement": "MenuOpen || ChatInputVisible"
+      }
+    ]
+  },
+  "Pull": {
+    "Sequence": [
+      {
+        "Name": "Throw",
+        "Key": "7",
+        "Item": true,
+        "WhenUsable": true,
+        "BeforeCastStop": true,                                   // enforcing stop movement before casting
+        "AfterCastWaitMeleeRange": true,
+        "Requirements": [
+          "AddVisible",                                   // Uses NpcNameFinder to detect danger up to you
+          "HasRangedWeapon && !Items Broken",
+          "!InMeleeRange && (SpellInRange:1)"          // Rogue Throw
+        ]
+      }
+    ]
+  },
+  "Combat": {
+    "Sequence": [
+      {
+        "Name": "Kick",
+        "Key": 6,
+        "WhenUsable": true,
+        "UseWhenTargetIsCasting": true
+        //"Requirement": "TargetCastingSpell:9053,11443"
+      },
+      {
+        "Name": "Evasion",
+        "Key": 5,
+        "WhenUsable": true,
+        "Requirement": "Health%<40"
+      },
+      {
+        "Name": "Slice and Dice",
+        "Key": "4",
+        "Requirements": [
+          "!Slice and Dice",
+          "Combo Point>0"
+        ]
+      },
+      {
+        "Name": "Eviscerate",
+        "Key": "3",
+        "Requirements": [
+          "TargetHealth%>20",
+          "Combo Point>1"
+        ]
+      },
+      {
+        "Name": "Sinister Strike",
+        "Key": "2"
+      },
+      {
+        "Name": "AutoAttack"
+      },
+      {
+        "Name": "Approach",
+        "Log": false
+      }
+    ]
+  },
+  "Adhoc": {
+    "Sequence": [
+      {
+        "Name": "potionhp",
+        "Key": "N4",
+        "Requirement": "Health%<5",
+        "Cooldown": 60000,
+        "InCombat": "true",
+        "Log": false,
+        "Cost": 3
+      },
+      {
+        "Name": "Food",
+        "Key": "N1",
+        "Requirement": "Health%<50"
+      },
+      {
+        "Name": "poisonmh",
+        "Key": "N2",
+        "HasCastbar": true,
+        "WhenUsable": true,
+        "AfterCastWaitCastbar": true,
+        "Requirements": [
+          "Equipment:Mainhand",
+          "!HasMainHandEnchant"
+        ],
+        "AfterCastAuraExpected": true
+      },
+      {
+        "Name": "poisonoh",
+        "Key": "N3",
+        "HasCastbar": true,
+        "WhenUsable": true,
+        "AfterCastWaitCastbar": true,
+        "Requirements": [
+          "Equipment:Offhand",
+          "!HasOffHandEnchant"
+        ],
+        "AfterCastAuraExpected": true
+      },
+      {
+        "Name": "openstuff",
+        "Key": "N5",
+        "Cooldown": 30000,
+        "Requirements": [
+          "BagItem:20768:1"
+        ],
+        "Log": false
+      }
+    ]
+  },
+  "NPC": {
+    "Sequence": [
+      {
+        "Name": "Repair Robert Aebischer",
+        "Key": "C",
+        "Requirement": "Durability% < 35",
+        "Cost": 6
+      },
+      {
+        "Name": "Sell Robert Aebischer",
+        "Key": "C",
+        "Requirements": [
+          "BagFull",
+          "BagGreyItem"
+        ],
+        "Cost": 6
+      }
+    ]
+  }
+}
