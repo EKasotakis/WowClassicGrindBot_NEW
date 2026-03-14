@@ -345,4 +345,29 @@ public sealed partial class PlayerReader : IMouseOverReader, IReader
 
         return elapsed < maxExpectedElapsed;
     }
+
+    // Public accessors for key AddonBits flags needed by headless state endpoint
+
+    public bool IsMounted() => bits.Mounted();
+
+    public bool InCombat() => bits.Combat();
+
+    public bool IsDead() => bits.Dead();
+
+    public string ZoneName
+    {
+        get
+        {
+            if (UIMapId.Value == 0) return "Unknown";
+
+            if (worldMapAreaDB.TryGet(UIMapId.Value, out var wma))
+            {
+                return wma.AreaName ?? "Unknown";
+            }
+
+            return "Unknown";
+        }
+    }
+    // public string SubZone => "Unknown";  // SubZone not available in AreaDB
+
 }

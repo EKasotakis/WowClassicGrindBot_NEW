@@ -43,6 +43,9 @@ public sealed partial class GoapAgent : IDisposable
     private readonly IScreenCapture screenCapture;
     private readonly IBagChangeTracker bagChangeTracker;
 
+    private readonly Queue<string> recentGoalNames = new Queue<string>(8);
+    private readonly Queue<DateTime> killTimestamps = new Queue<DateTime>();
+
     private bool active;
     public bool Active
     {
@@ -91,7 +94,7 @@ public sealed partial class GoapAgent : IDisposable
     }
 
     public BitVector32 WorldState { get; private set; }
-
+    
     public SessionStat SessionStat { get; }
 
     public GoapAgentState State { get; }
@@ -99,6 +102,13 @@ public sealed partial class GoapAgent : IDisposable
 
     public Stack<GoapGoal> Plan { get; private set; }
     public GoapGoal? CurrentGoal { get; private set; }
+    public DateTime CurrentGoalStartTime { get; private set; } = DateTime.UtcNow;
+
+    public double SecondsInCurrentGoal => (DateTime.UtcNow - CurrentGoalStartTime).TotalSeconds;
+
+    public IReadOnlyCollection<string> RecentGoals => recentGoalNames.ToList().AsReadOnly();
+
+    public int KillsLast10Min => killTimestamps.Count;
 
     public GoapAgent(
         ILogger<GoapAgent> logger,
@@ -216,10 +226,24 @@ public sealed partial class GoapAgent : IDisposable
             {
                 if (newGoal != CurrentGoal)
                 {
+                    // Save previous goal to history
+                    if (CurrentGoal != null)
+                    {
+                        string prevName = CurrentGoal.Name;
+                        if (string.IsNullOrWhiteSpace(prevName))
+                            prevName = CurrentGoal.GetType().Name.Replace("Goal", "").Trim();
+
+                        recentGoalNames.Enqueue(prevName);
+                        if (recentGoalNames.Count > 8)
+                            recentGoalNames.Dequeue();
+                    }
+
+                    // Reset timer
+                    CurrentGoalStartTime = DateTime.UtcNow;
+
                     wasEmpty = false;
                     CurrentGoal?.OnExit();
                     CurrentGoal = newGoal;
-
                     LogNewGoal(logger, newGoal.Name);
                     CurrentGoal.OnEnter();
                 }
@@ -356,13 +380,17 @@ public sealed partial class GoapAgent : IDisposable
         }
 
         SessionStat.Kills++;
-
         State.LastCombatKillCount++;
         State.ConsumableCorpseCount++;
-
         BroadcastGoapEvent(GoapKey.producedcorpse, true);
-
         LogActiveKillDetected(logger, SessionStat.Kills, State.LastCombatKillCount, combatLog.DamageTakenCount());
+
+        // ADD: record kill time
+        killTimestamps.Enqueue(DateTime.UtcNow);
+
+        // Clean up old kills (> 10 min)
+        while (killTimestamps.Count > 0 && (DateTime.UtcNow - killTimestamps.Peek()).TotalMinutes > 10)
+            killTimestamps.Dequeue();
     }
 
     public void PlayerDied()

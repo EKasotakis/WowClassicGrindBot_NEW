@@ -4,31 +4,46 @@ using System.Text.Json;
 using Core; // IAddonReader, PlayerReader live here
 using Microsoft.Extensions.Logging;
 using System.Threading.Tasks;
+using Core.GOAP;
+using Microsoft.Extensions.DependencyInjection;
+using System.Linq;
 
 namespace HeadlessServer;
 
 public sealed class StateEndpointService : IDisposable
 {
+    
     private readonly HttpListener _listener = new();
     private readonly IAddonReader _addonReader;
     private readonly PlayerReader _playerReader; // ← NEW: injected
+    // private readonly IServiceProvider _serviceProvider;
+    private readonly IBotController _botController;
     private readonly ILogger<StateEndpointService> _logger;
     private Task? _listenTask;
     private readonly CancellationTokenSource _cts = new();
+    private readonly AddonBits _bits;
+    private readonly BagReader _bagReader;
 
     public StateEndpointService(
         IAddonReader addonReader,
         PlayerReader playerReader,               // ← DI must resolve this
-        GoapAgent goapAgent,
+        AddonBits bits,
+        BagReader bagReader,
+        // IServiceProvider serviceProvider,
+        IBotController botController,
         ILogger<StateEndpointService> logger)
     {
         _addonReader = addonReader ?? throw new ArgumentNullException(nameof(addonReader));
         _playerReader = playerReader ?? throw new ArgumentNullException(nameof(playerReader));
+        //_serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-
+        _bits = bits ?? throw new ArgumentNullException(nameof(bits));
+        _bagReader = bagReader ?? throw new ArgumentNullException(nameof(bagReader));
+        _botController = botController ?? throw new ArgumentNullException(nameof(botController));
+        
         _listener.Prefixes.Add("http://localhost:8080/");
+
     }
-    private readonly GoapAgent _goapAgent;
 
     public void Start()
     {
@@ -99,23 +114,38 @@ public sealed class StateEndpointService : IDisposable
         double playerZ = 0.0;
         int healthPct = 100;
         int manaPct = 100;
-        int freeSlots = 16;
+        int freeSlots = _bagReader != null ? _bagReader.Bags.Sum(b => b.FreeSlot) : 16;
         int durabilityPct = 100;
         bool isMounted = false;
         bool inCombat = false;
         string botStatus = "Running";
+        string goalName = "None/Idle";
+        string zoneName = _playerReader.ZoneName;
+
+        // Declare variables once
+        double secondsInGoal = 0;
+        var recentGoals = Array.Empty<string>();
+        int killsLast10Min = 0;
+        int foodCount = 0;
+        int drinkCount = 0;
 
         try
         {
-            // Force refresh from the current addon buffer (critical!)
-            _playerReader.Update(_addonReader);
+            _addonReader.Update();
 
-            // Read position (already working)
+            if (_addonReader is IAddonDataProvider dataProvider)
+            {
+                _playerReader.Update(dataProvider);
+            }
+            else
+            {
+                Console.WriteLine("[STATE DTO] Warning: IAddonReader is not IAddonDataProvider");
+            }
+
             playerX = _playerReader.MapX;
             playerY = _playerReader.MapY;
             playerZ = _playerReader.WorldPosZ;
 
-            // Health & Mana – log raw values to debug why % is stuck
             int healthCurrent = _playerReader.HealthCurrent();
             int healthMax = _playerReader.HealthMax();
             int manaCurrent = _playerReader.ManaCurrent();
@@ -126,24 +156,82 @@ public sealed class StateEndpointService : IDisposable
 
             durabilityPct = _playerReader.AvgEquipDurability();
 
-            // Debug logging – watch these in console
             Console.WriteLine($"[STATE DTO] Raw Health: {healthCurrent}/{healthMax} → {healthPct}%");
-            Console.WriteLine($"[STATE DTO] Raw Mana:   {manaCurrent}/{manaMax}   → {manaPct}%");
-            Console.WriteLine($"[STATE DTO] Durability: {durabilityPct}% | Pos: {playerX:F2}, {playerY:F2}");
+            Console.WriteLine($"[STATE DTO] Raw Mana: {manaCurrent}/{manaMax} → {manaPct}%");
+            Console.WriteLine($"[STATE DTO] Durability: {durabilityPct}% | Pos: {playerX:F2}, {playerY:F2}, {playerZ:F2}");
 
-            // Mounted / InCombat – try if bits is public
-            // if (_playerReader.bits != null) {
-            //     isMounted = _playerReader.bits.IsMounted();
-            //     inCombat  = _playerReader.bits.InCombat();
-            // }
+            if (_bits == null)
+            {
+                Console.WriteLine("[STATE DTO] Warning: AddonBits is null");
+                isMounted = false;
+                inCombat = false;
+            }
+            else
+            {
+                isMounted = _bits.Mounted();
+                inCombat = _bits.Combat();
+                Console.WriteLine($"[STATE DTO] Mounted: {isMounted} | InCombat: {inCombat}");
+            }
 
-            // Optional: better status based on state
-            if (_playerReader.IsCasting()) botStatus = "Casting";
+            if (inCombat)
+                botStatus = "InCombat";
+            else if (_playerReader.IsCasting())
+                botStatus = "Casting";
+            else if (_bits.Dead())
+                botStatus = "Dead";
+
+            var goapAgent = _botController.GoapAgent;
+
+            Console.WriteLine($"[STATE DTO] GoapAgent resolved OK: {goapAgent != null}, Active: {goapAgent?.Active}");
+
+            secondsInGoal = goapAgent?.SecondsInCurrentGoal ?? 0;
+            recentGoals = goapAgent?.RecentGoals ?? Array.Empty<string>();
+            killsLast10Min = goapAgent?.KillsLast10Min ?? 0;
+
+            foodCount = _bagReader?.FoodItemCount() ?? 0;
+            drinkCount = _bagReader?.DrinkItemCount() ?? 0;
+
+            zoneName = _playerReader.ZoneName;
+
+            if (goapAgent?.CurrentGoal != null)
+            {
+                goalName = goapAgent.CurrentGoal.Name ?? string.Empty;
+                if (string.IsNullOrWhiteSpace(goalName))
+                {
+                    goalName = goapAgent.CurrentGoal.GetType().Name.Replace("Goal", "").Trim();
+                }
+
+                goalName = goalName switch
+                {
+                    var n when n.Contains("Adhoc") => "Adhoc (vendor/repair/eat/wait/etc)",
+                    var n when n.Contains("FollowRoute") => "FollowRoute (main grind path)",
+                    var n when n.Contains("Combat") => "Combat",
+                    var n when n.Contains("Loot") => "Loot",
+                    var n when n.Contains("NPC") => "NPC (vendor/mail)",
+                    var n when n.Contains("Pull") => "Pull",
+                    var n when n.Contains("Skinning") => "Skinning",
+                    var n when n.Contains("Gather") => "Gathering",
+                    _ => goalName
+                };
+                
+                Console.WriteLine($"[STATE DTO] Current Goal: {goalName}");
+            }
+            else
+            {
+                Console.WriteLine("[STATE DTO] No active CurrentGoal");
+            }
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to read/update PlayerReader");
+            _logger.LogWarning(ex, "Failed reading state");
             Console.WriteLine($"[STATE DTO] Error: {ex.Message}");
+
+            // Minimal return in catch
+            return new
+            {
+                Timestamp = DateTime.UtcNow,
+                Error = "Failed to build state: " + ex.Message
+            };
         }
 
         return new
@@ -155,9 +243,16 @@ public sealed class StateEndpointService : IDisposable
             BagSlotsFree = freeSlots,
             DurabilityPercent = durabilityPct,
             BotStatus = botStatus,
-            LastGoal = "Unknown (check logs)",
+            CurrentGoal = goalName,
             IsMounted = isMounted,
-            InCombat = inCombat
+            InCombat = inCombat,
+
+            SecondsInCurrentGoal = secondsInGoal,
+            RecentGoals = (string[])recentGoals.ToArray(),
+            KillsLast10Min = killsLast10Min,
+            FoodCount = foodCount,
+            DrinkCount = drinkCount,
+            ZoneName = zoneName
         };
     }
 
@@ -173,5 +268,6 @@ public sealed class StateEndpointService : IDisposable
         catch { }
     }
 
+    
     public void Dispose() => Stop();
 }
